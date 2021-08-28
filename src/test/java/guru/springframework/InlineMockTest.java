@@ -9,12 +9,10 @@ import static org.mockito.Mockito.mock;
 
 public class InlineMockTest {
 
+    // this is an inline mock using a static method
     @Test
     void testInlineMock() {
         Map mapMock = mock(Map.class);
-
         assertEquals(mapMock.size(), 0);
-
-
     }
 }
