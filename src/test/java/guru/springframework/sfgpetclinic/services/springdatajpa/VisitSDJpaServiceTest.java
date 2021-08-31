@@ -8,24 +8,27 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 
+import javax.validation.valueextraction.Unwrapping;
 import java.util.Optional;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.BDDMockito.*;
+import static org.mockito.quality.Strictness.LENIENT;
 
 @ExtendWith(MockitoExtension.class)
 class VisitSDJpaServiceTest {
 
     @Mock
-    VisitRepository repo;
+     VisitRepository repo;
 
     @InjectMocks
     VisitSDJpaService service;
@@ -141,4 +144,74 @@ class VisitSDJpaServiceTest {
         // then
          then(repo). should().deleteById(anyLong());
     }
+
+    @Test
+    void testDoThrow() {
+        doThrow(new RuntimeException("Boom!")).when(repo).delete(any());
+
+        assertThrows(RuntimeException.class, () -> repo.delete(new Visit()));
+
+        verify(repo).delete(any(Visit.class));
+    }
+
+    @DisplayName("BDD FindById")
+    @Test
+    void testFindByIDBDD() {
+        given(repo.findById(1l)).willThrow(new RuntimeException("Boom!"));
+
+        assertThrows(RuntimeException.class, () -> repo.findById(1L));
+
+        then(repo).should().findById(1l);
+    }
+
+    @Test
+    void testDeleteBDD() {
+        willThrow(new RuntimeException("Boom!")).given(repo).delete(any(Visit.class));
+
+        assertThrows(RuntimeException.class, () -> repo.delete(new Visit()));
+
+        then(repo). should().delete(any(Visit.class));
+    }
+
+    @Test
+    void testSaveLambda() {
+        // given
+        final String MATCH_ME = "MATCH_ME";
+        Visit visit = new Visit();
+        visit.setDescription(MATCH_ME);
+
+        Visit savedVisit = new Visit();
+        savedVisit.setId(1L);
+
+        // Need mock to only return on match to MATCH_ME string
+        given(repo.save(argThat(argument -> argument.getDescription().equals(MATCH_ME)))).willReturn(savedVisit);
+
+        // when
+        Visit returnedVisit = service.save(visit);
+
+        // then
+        assertThat(returnedVisit.getId()).isEqualTo(1L);
+
+    }
+    // TODO investigate this further to determine best way to fix or if even needing to perform a test like this.
+//    @Test
+//    void testSaveLambdaNoMatch() {
+//        // given
+//        final String MATCH_ME = "MATCH_ME";
+//        Visit visit = new Visit();
+//        visit.setDescription("Not a Match!");
+//
+//        Visit savedVisit = new Visit();
+//        savedVisit.setId(1L);
+//
+//        // Need mock
+//        given(repo.save(argThat(argument -> argument.getDescription().equals(MATCH_ME)))).willReturn(savedVisit);
+//
+//        // when
+//        Visit returnedVisit = service.save(visit);
+//
+//        // then
+//        assertNull(returnedVisit);
+//
+//    }
 }
